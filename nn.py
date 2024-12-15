@@ -10,15 +10,15 @@ import torch.optim as optim
 val_split = 0.15                 # percentage of validation data in all data
 batch_size = 128
 num_epoch = 100
-learning_rate = 0.0005
-weight_decay = 0.01
-num_neuron = [256, 128, 64]
-num_layers = 3                   # number of layers
+learning_rate = 0.001
+weight_decay = 0.005
+num_neuron = [128, 32]
+num_layers = 2                   # number of layers
 dropout = 0.7                    # dropout rate
 
 train_file_path = "preprocess_5.csv"
-test_file_path = ["preprocess_test_2.csv", "preprocess_test_2024_2.csv"]
-output_file_path = ["nn_1.csv", "nn_2024_1.csv"]
+test_file_path = ["preprocess_test_2.csv", "preprocess2024_test_2.csv"]
+output_file_path = ["nn_2.csv", "nn2024_2.csv"]
 
 class NN(nn.Module):
     def __init__(self, num_feature, num_neuron, num_layers, dropout):
@@ -88,11 +88,10 @@ def train(train_loader, val_loader, model, device):
             max_acc = val_acc
             best_model = model.state_dict()
             print("best model updated")
-        best_model = model.state_dict()
         
     return best_model
 
-def test(X, best_model, device):
+def test(X, best_model, device, output_file_path):
     model.load_state_dict(best_model)
     model.eval()
     X = X.to(device)
@@ -117,6 +116,7 @@ if __name__ == "__main__":
     data = data.to_numpy()
     
     X = data[:,1:]
+    print("X ",X.shape)
     num_feature = X.shape[1]
     X = np.nan_to_num(X.astype(np.float32), nan=0.0)
     X = np.expand_dims(X, axis=1)
@@ -133,15 +133,17 @@ if __name__ == "__main__":
     train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=True)
     val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=False)
 
+    model = NN(num_feature, num_neuron, num_layers, dropout)
+    model = model.to(device)
+    best_model = train(train_loader, val_loader, model, device)
+    
     # reading test data
     for i in range(2):
         test_data = pd.read_csv(test_file_path[i])
         test_X = test_data.to_numpy()
+        print("test_X ",i,test_X.shape)
         test_X = np.nan_to_num(test_X.astype(np.float32), nan=0.0)
         test_X = np.expand_dims(test_X, axis=1)
         test_X_tensor = torch.from_numpy(test_X)
         
-        model = NN(num_feature, num_neuron, num_layers, dropout)
-        model = model.to(device)
-        best_model = train(train_loader, val_loader, model, device)
-        test(test_X_tensor, best_model, device)
+        test(test_X_tensor, best_model, device, output_file_path[i])
